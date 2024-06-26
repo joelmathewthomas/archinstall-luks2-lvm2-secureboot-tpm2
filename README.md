@@ -170,7 +170,7 @@ Mount the partition to `/mnt/efi`:
 
 **Note**: This section of the guide deals with installing the base system, setting up timezones, locale, hostname, hosts, creating new non-root user's, setting passwords for both `root` and `non-root` user accounts.
 This is generally user specific configuration, and you might have a different setup you might, want to follow.
-So it is recommended to refer to official [Arch Wiki Installation guide](https://wiki.archlinux.org/title/installation_guide#Installation), for this section. And you may come back here and follow from the next section, when it is time to [configure mkinitcpio](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2/tree/main?tab=readme-ov-file#7-configuring-mkinitcpio).
+So it is recommended to refer to official [Arch Wiki Installation guide](https://wiki.archlinux.org/title/installation_guide#Installation), for this section. And you may come back here and follow from the next section, when it is time to [configure mkinitcpio](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2#7-configure-mkinitcpio).
 
 But, if you want to follow through, how I do it, feel free to follow through this section.
 
