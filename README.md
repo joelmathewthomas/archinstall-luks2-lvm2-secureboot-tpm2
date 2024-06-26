@@ -21,7 +21,7 @@ This guide assumes that your system supports UEFI.
 
 ### 1. Disk Preparation
 
-We'll use a 512MB FAT32 system partition for our **EFI** partition , and for the root we'll use an **ext4** partition and a **SWAP** partition using **LVM2** logical volumes inside a LUKS encrypted partition. 
+We'll use a 1024MB FAT32 system partition for our **EFI** partition , and for the root we'll use an **ext4** partition and a **SWAP** partition using **LVM2** logical volumes inside a LUKS encrypted partition. 
 
 ### 2. Partition the disks
 
