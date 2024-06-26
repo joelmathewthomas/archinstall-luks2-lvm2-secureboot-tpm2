@@ -430,7 +430,21 @@ $ sbctl create-keys
 Enroll the keys, with Microsoft's keys, to the UEFI:
 
 ```
-$ sbctl enroll-keys -m
+$ sbctl enroll-keys -m --firmware-builtin
+```
+
+```
+Options
+-m, --microsoft
+Enroll UEFI vendor certificates from Microsoft into the signature database. See Option ROM*.
+
+-f, --firmware-builtin
+Enroll signatures from dbDefault, KEKDefault or PKDefault. This is usefull if sbctl does not vendor your OEM certificates, or doesn’t include all of them.
+
+Valid values are "db", "KEK" or "PK" passed as a comma
+delimitered string.
+
+Default: "db,KEK"
 ```
 
 Warning: Some firmware is signed and verified with Microsoft's keys when secure boot is enabled. Not validating devices could brick them. To enroll your keys without enrolling Microsoft's, run: `sbctl enroll-keys`. Only do this if you know what you are doing.
@@ -514,7 +528,7 @@ We'll now enroll our system firmware and secure boot state.
 This would allow our TPM to unlock our encrypted drive, as long as the state hasn't changed.
 
 ```
-$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --firmware-builtin /dev/nvme0n1p2
+$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/nvme0n1p2
 ```
 
 **Note**: Including PCR0 in the PCRs can cause the entry to become invalid after every firmware update. This happens because PCR0 reflects measurements of the firmware, and any update to the firmware will change these measurements, invalidating the TPM2 entry. If you prefer to avoid this issue, you might exclude PCR0 and use only PCR7 or other suitable PCRs.
