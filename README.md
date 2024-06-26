@@ -170,7 +170,7 @@ Mount the partition to `/mnt/efi`:
 
 **Note**: This section of the guide deals with installing the base system, setting up timezones, locale, hostname, hosts, creating new non-root user's, setting passwords for both `root` and `non-root` user accounts.
 This is generally user specific configuration, and you might have a different setup you might, want to follow.
-So it is recommended to refer to official [Arch Wiki Installation guide](https://wiki.archlinux.org/title/installation_guide#Installation), for this section. And you may come back here and follow from the next section, when it is time to [configure mkinitcpio](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2/edit/main/README.md#7-configuring-mkinitcpio).
+So it is recommended to refer to official [Arch Wiki Installation guide](https://wiki.archlinux.org/title/installation_guide#Installation), for this section. And you may come back here and follow from the next section, when it is time to [configure mkinitcpio](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2/tree/main?tab=readme-ov-file#7-configuring-mkinitcpio).
 
 But, if you want to follow through, how I do it, feel free to follow through this section.
 
@@ -289,7 +289,7 @@ Add new user to wheel group:
 # usermod -G wheel newuser
 ```
 
-### 7. Configuring mkinitcpio
+### 7. Configure mkinitcpio
 
 To build a working systemd based initramfs, modify the `HOOKS=` line in mkinitcpio.conf as follows: 
 Add the following hooks: **systemd, keyboard, sd-vconsole, sd-encrypt, lvm2**
