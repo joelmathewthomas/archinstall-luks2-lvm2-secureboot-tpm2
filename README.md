@@ -554,7 +554,7 @@ Tokens:
   ...
 	Keyslot:    2
 ```
-As , you can see keyslot **1** is used by `systemd-recovery` and **2** is used by `systemd-tpm2`
+As you can see keyslot **1** is used by `systemd-recovery` and **2** is used by `systemd-tpm2`
 
 Now to kill it run:
 
