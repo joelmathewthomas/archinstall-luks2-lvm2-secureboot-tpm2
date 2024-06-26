@@ -1,7 +1,22 @@
 # Arch Linux install with full disk encryption with LUKS2 ,Logical Volumes with LVM2, Secure Boot and TPM2 Setup
 A complete Arch Linux installation guide with **LUKS2** full disk encryption, and logical volumes with **LVM2**, and added security using **Secure Boot** with **Unified Kernel Image** and **TPM2 LUKS** key enrollment for auto unlocking encrypted root.
 
-Firstly, Acquire an installation image. Visit the Download page and, acquire the ISO file and flash it to a USB drive and boot off it.
+Firstly, Acquire an installation image. Visit the Download page and, acquire the ISO file and the respective GnuPG signature, and flash it to a USB drive and boot off it.
+
+It is recommended to verify the image signature before use, especially when downloading from an _HTTP mirror_, where downloads are generally prone to be intercepted to serve malicious images.
+
+On a system with GnuPG installed, do this by downloading the ISO PGP signature (under Checksums in the page Download) to the ISO directory, and verifying it with:
+
+```
+$ gpg --keyserver-options auto-key-retrieve --verify archlinux-version-x86_64.iso.sig
+```
+
+Alternatively, from an existing Arch Linux installation run:
+
+```
+$ pacman-key -v archlinux-version-x86_64.iso.sig
+```
+
 This guide assumes that your system supports UEFI.
 
 ### 1. Disk Preparation
@@ -35,7 +50,7 @@ Open a terminal. Identify your disk. For this guide, we'll use /dev/nvme0n1 as a
 
     Create EFI System Partition:
         **Select [ New ]**.
-        Enter **512M** for the size.
+        Enter **1024M** for the size.
         Select **[ Type ]** and choose **EFI** System.
 
     Create LUKS Partition:
@@ -53,7 +68,7 @@ Open a terminal. Identify your disk. For this guide, we'll use /dev/nvme0n1 as a
     +------------------+-----------------------+------------+---------------+
     | Partition Number | Partition Type        | Size       | Description   |
     +------------------+-----------------------+------------+---------------+
-    | /dev/nvme0n1p1   | EFI System            | 512M       | EFI Partition |
+    | /dev/nvme0n1p1   | EFI System            | 1024M       | EFI Partition |
     | /dev/nvme0n1p2   | Linux filesystem      | Remaining  | LUKS2 Volume  |
     +------------------+-----------------------+------------+---------------+
     ```
@@ -64,13 +79,21 @@ After partitioning, `lsblk` will output the following.
 $ lsblk
 NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
 nvme0n1     259:0    0  238.5G  0 disk
-├─nvme0n1p1 259:1    0   512M  0 part 
+├─nvme0n1p1 259:1    0   1024M  0 part 
 └─nvme0n1p2 259:2    0   709G  0 part
 ```
 
 ### 3. Create the encrypted LUKS2 container.
 
 Now we, need to create the **LUKS2** encrypted container.
+
+**Optional**: Overwriting your disk with random data is an optional step that can help prevent any possible recovery of old data. This is typically done before setting up the LUKS2 container to ensure the disk is fully erased.
+
+Warning: This will erase all data on the disk. Ensure you have selected the correct device.
+
+```
+dd if=/dev/urandom of=/dev/nvme0n1p2 bs=1M status=progress
+```
 
 Create the LUKS encrypted container at the designated partition. Enter the chosen password twice. 
 
@@ -144,10 +167,16 @@ Mount the partition to `/mnt/efi`:
 
 ### 6. Installation
 
+**Note**: This section of the guide deals with installing the base system, setting up timezones, locale, hostname, hosts, creating new non-root user's, setting passwords for both `root` and `non-root` user accounts.
+This is generally user specific configuration, and you might have a different setup you might, want to follow.
+So it is recommended to refer to official [Arch Wiki Installation guide](https://wiki.archlinux.org/title/installation_guide#Installation), for this section. And you may come back here and follow from the next section, when it is time to [configure mkinitcpio](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2/edit/main/README.md#7-configuring-mkinitcpio).
+
+But, if you want to follow through, how i do it, feel free to follow through this section.
+
 Install essential packages:
 
 ```
-# pacstrap /mnt base linux linux-firmware linux-headers intel-ucode vim nano efibootmgr sudo
+# pacstrap -K /mnt base linux linux-firmware linux-headers intel-ucode vim nano efibootmgr sudo
 ```
 
 You can replace `intel-ucode` with `amd-ucode` if your CPU is an **AMD** CPU
@@ -484,15 +513,26 @@ We'll now enroll our system firmware and secure boot state.
 This would allow our TPM to unlock our encrypted drive, as long as the state hasn't changed.
 
 ```
-$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7  /dev/nvme0n1p2
+$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --firmware-builtin /dev/nvme0n1p2
 ```
+
+**Note**: Including PCR0 in the PCRs can cause the entry to become invalid after every firmware update. This happens because PCR0 reflects measurements of the firmware, and any update to the firmware will change these measurements, invalidating the TPM2 entry. If you prefer to avoid this issue, you might exclude PCR0 and use only PCR7 or other suitable PCRs.
 
 If all is well, reboot , and you won't be prompted for a passphrase, unless secure boot is disabled or secure boot state has changed.
 
 ### 14. Tips
 
-Now if at some point later in time, our secure boot state has changed, for example by, booting an UBUNTU ISO which adds it's own secure boot keys, the TPM won't unlock our encrypted drive anymore.
-To fix it, first enter UEFI, and clear the TPM.
+Now if at some point later in time, our secure boot state has changed, the TPM won't unlock our encrypted drive anymore. To fix it, do the following.
+
+This can be done in a very short step and is less prone to error by running the following command:
+
+```
+systemd-cryptenroll --wipe-slot=tpm2 /dev/<device>
+```
+
+Or, if you prefer to do it manually, do the following:
+
+First enter UEFI, and clear the TPM.
 
 Then boot into Arch Linux, as root.
 
