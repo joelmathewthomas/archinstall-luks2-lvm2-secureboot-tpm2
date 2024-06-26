@@ -541,7 +541,7 @@ Note that incorrect PIN entry when unlocking increments the TPM dictionary attac
 
 **Note**: Including PCR0 in the PCRs can cause the entry to become invalid after every firmware update. This happens because PCR0 reflects measurements of the firmware, and any update to the firmware will change these measurements, invalidating the TPM2 entry. If you prefer to avoid this issue, you might exclude PCR0 and use only PCR7 or other suitable PCRs.
 
-Info , on all additional PCRs can be found [here](https://wiki.archlinux.org/title/Trusted_Platform_Module#Accessing_PCR_registers)
+Info on all additional PCRs can be found [here](https://wiki.archlinux.org/title/Trusted_Platform_Module#Accessing_PCR_registers)
 
 If all is well, reboot , and you won't be prompted for a passphrase, unless secure boot is disabled or secure boot state has changed.
 
@@ -552,7 +552,7 @@ Now if at some point later in time, our secure boot state has changed, the TPM w
 This can be done in a very short step and is less prone to error by running the following command:
 
 ```
-systemd-cryptenroll --wipe-slot=tpm2 /dev/<device> --tpm2-pcrs=0+7
+systemd-cryptenroll --wipe-slot=tpm2 /dev/<device> --tpm2-pcrs=7+11
 ```
 
 Or, if you prefer to do it manually, do the following:
