@@ -6,11 +6,11 @@ This guide assumes that your system supports UEFI.
 
 ### 1. Disk Preparation
 
-We'll use a 512MB FAT32 system partition for our **EFI** partition , and for the root we'll use an **ext4** partition and a **SWAP** partition using LVM2 logical volumes inside a LUKS encrypted partition. 
+We'll use a 512MB FAT32 system partition for our **EFI** partition , and for the root we'll use an **ext4** partition and a **SWAP** partition using **LVM2** logical volumes inside a LUKS encrypted partition. 
 
 ### 2. Partition the disks
 
-We're gonna be using cfdisk for partitioning the disks.
+We're gonna be using `cfdisk` for partitioning the disks.
 
 Before partitioning , the output of `lsblk` is gonna look something like this.
 
@@ -22,23 +22,25 @@ nvme0n1     259:0    0  709.5G  0 disk
 
 1. Launch `cfdisk`:
 Open a terminal. Identify your disk. For this guide, we'll use /dev/nvme0n1 as an example. Replace it with your actual disk identifier.
-   
-    `cfdisk /dev/nvme0n1`
 
-2. Select the Label Type:
+   ```
+   cfdisk /dev/nvme0n1
+   ```
 
-    Choose gpt (GUID Partition Table) if prompted.
+3. Select the Label Type:
 
-3. Create Partitions:
+    Choose **gpt** (GUID Partition Table) if prompted.
+
+4. Create Partitions:
 
     Create EFI System Partition:
-        Select [ New ].
-        Enter 512M for the size.
-        Select [ Type ] and choose EFI System.
+        **Select [ New ]**.
+        Enter **512M** for the size.
+        Select **[ Type ]** and choose **EFI** System.
 
     Create LUKS Partition:
-        Select [ New ].
-        Use the remaining disk space for this partition, or allocate the space you want , if you don't plan on using the entire disk, for this setup.
+        Select **[ New ]**.
+        Use the remaining disk space for this partition, or allocate the space you want , if you don't plan on using the entire disk for this setup.
         Ensure the type is Linux filesystem.
 
     Write Changes:
@@ -46,7 +48,7 @@ Open a terminal. Identify your disk. For this guide, we'll use /dev/nvme0n1 as a
         Select [ Write ].
         Type yes to confirm.
 
-4. Visual Representation of Partition Structure:
+5. Visual Representation of Partition Structure:
     ```
     +------------------+-----------------------+------------+---------------+
     | Partition Number | Partition Type        | Size       | Description   |
@@ -56,7 +58,7 @@ Open a terminal. Identify your disk. For this guide, we'll use /dev/nvme0n1 as a
     +------------------+-----------------------+------------+---------------+
     ```
 
-After partitioning, this is `lsblk` will output the following.
+After partitioning, `lsblk` will output the following.
 
 ```
 $ lsblk
@@ -68,7 +70,7 @@ nvme0n1     259:0    0  238.5G  0 disk
 
 ### 3. Create the encrypted LUKS2 container.
 
-Now we, need to create the LUKS2 encrypted container.
+Now we, need to create the **LUKS2** encrypted container.
 
 Create the LUKS encrypted container at the designated partition. Enter the chosen password twice. 
 
@@ -94,7 +96,7 @@ Create a physical volume on top of the opened LUKS container:
 # pvcreate /dev/mapper/cryptlvm
 ```
 
-Create a volume group (in this example named `MyVolGroup`, but it can be whatever you want) and add the previously created physical volume to it: 
+Create a volume group (in this example, it is named `MyVolGroup`, but it can be whatever you want) and add the previously created physical volume to it: 
 
 ```
 # vgcreate MyVolGroup /dev/mapper/cryptlvm
@@ -102,7 +104,7 @@ Create a volume group (in this example named `MyVolGroup`, but it can be whateve
 
 Create all your logical volumes on the volume group: 
 
-Tip: If a logical volume will be formatted with ext4, leave at least 256 MiB free space in the volume group to allow using e2scrub(8). After creating the last volume with -l 100%FREE, this can be accomplished by reducing its size with lvreduce -L -256M MyVolGroup/home.
+Tip: If a logical volume will be formatted with ext4, leave at least 256 MiB free space in the volume group to allow using `e2scrub`. After creating the last volume with `-l 100%FREE`, this can be accomplished by reducing its size with `lvreduce -L -256M MyVolGroup/home`.
 
 ```
 # lvcreate -L 4G MyVolGroup -n swap
@@ -145,10 +147,10 @@ Mount the partition to `/mnt/efi`:
 Install essential packages:
 
 ```
-# pacstrap /mnt base linux linux-firmare linux-headers intel-ucode vim nano efibootmgr sudo
+# pacstrap /mnt base linux linux-firmware linux-headers intel-ucode vim nano efibootmgr sudo
 ```
 
-You can replace `intel-ucode` with `amd-ucode` if your CPU is and AMD CPU
+You can replace `intel-ucode` with `amd-ucode` if your CPU is an **AMD** CPU
 
 After that is completed, we need to generate the fstab file:
 
@@ -179,13 +181,13 @@ This command assumes the hardware clock is set to UTC.
 
 Localization:
 
-Edit /etc/locale.gen and uncomment en_US.UTF-8 UTF-8 and other needed UTF-8 locales. Generate the locales by running: 
+Edit `/etc/locale.gen` and uncomment `en_US.UTF-8 UTF-8` and other needed `UTF-8` locales. Generate the locales by running: 
 
 ```
 # locale-gen
 ```
 
-Create the `locale.conf` file, and set the **LANG variable ** accordingly:
+Create the `locale.conf` file, and set the LANG variable accordingly:
 
 ```
 /etc/locale.conf
@@ -254,7 +256,7 @@ Uncomment the following line:
 Add new user to wheel group:
 
 ```
-usermod -G wheel newuser
+# usermod -G wheel newuser
 ```
 
 ### 7. Configuring mkinitcpio
@@ -272,7 +274,7 @@ Do **not** regenerate the initramfs **yet**, as the `/efi/EFI/Linux` directory n
 
 ### 8. Configure mkinitcpio for Unified kernel images.
 
-mkinitcpio supports reading kernel parameters from command line files in the /etc/cmdline.d directory. Mkinitcpio will concatenate the contents of all files with a .conf extension in this directory and use them to generate the kernel command line. Any lines in the command line file that start with a # character are treated as comments and ignored by mkinitcpio. 
+mkinitcpio supports reading kernel parameters from command line files in the `/etc/cmdline.d` directory. Mkinitcpio will concatenate the contents of all files with a `.conf` extension in this directory and use them to generate the kernel command line. Any lines in the command line file that start with a # character are treated as comments and ignored by mkinitcpio. 
 
 Create the `cmdline.d` directory:
 
@@ -284,6 +286,7 @@ In order to unlock the encrypted root partition at boot, the following kernel pa
 
 ```
 /etc/cmdline.d/root.conf
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 rd.luks.name=device-UUID=cryptlvm root=/dev/MyVolGroup/root
 ```
 
@@ -301,7 +304,7 @@ This is an example output.
 
 Now you need to obtain the **UUID** for the luks container , in our case for `/dev/nvme0n1p2` which is `abcdef12-3456-7890-abcd-ef1234567890`
 
-Next, modify `/etc/mkinitcpio.d/linux.preset`, or the preset that you are using, as follows, with the appropriate mount point of the EFI system partition: 
+Next, modify `/etc/mkinitcpio.d/linux.preset`, as follows, with the appropriate mount point of the EFI system partition: 
 
 Here is a working example linux.preset for the linux kernel and the Arch splash screen. 
 
@@ -364,7 +367,7 @@ Install NetworkManager to ensure we have network connectivity when we boot into 
 pacman -S networkmanager && systemctl enable NetworkManager
 ```
 
-``` 11. Reboot into `UEFI`
+### 11. Reboot into `UEFI`
 
 Now reboot into `UEFI` and put secure boot into **SETUP MODE**. Refer to your motherboard manufaturer's guide on how to do that.
 
@@ -376,7 +379,7 @@ Now when booting into **Arch Linux** you'll be prompted to enter the passphrase 
 
 Enter it and boot into the system. Login as **root**.
 
-### 11. Secure Boot
+### 12. Secure Boot
 
 Now to configure secure boot , first install the `sbctl` utility:
 
@@ -400,7 +403,7 @@ Enroll the keys, with Microsoft's keys, to the UEFI:
 $ sbctl enroll-keys -m
 ```
 
-Warning: Some firmware is signed and verified with Microsoft's keys when secure boot is enabled. Not validating devices could brick them. To enroll your keys without enrolling Microsoft's, run: sbctl enroll-keys. Only do this if you know what you are doing.
+Warning: Some firmware is signed and verified with Microsoft's keys when secure boot is enabled. Not validating devices could brick them. To enroll your keys without enrolling Microsoft's, run: `sbctl enroll-keys`. Only do this if you know what you are doing.
 
 Check the secure boot status again:
 
@@ -450,7 +453,7 @@ System:
   Boot into FW: supported
 ```
 
-### 12. Enrolling the TPM
+### 13. Enrolling the TPM
 
 Make sure Secure Boot is active and in user mode when binding to PCR 7, otherwise, unauthorized boot devices could unlock the encrypted volume.
 The state of PCR 7 can change if firmware certificates change, which can risk locking the user out. This can be implicitly done by fwupd or explicitly by rotating Secure Boot keys.
@@ -486,14 +489,14 @@ $ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7  /dev/nvme0n1p2
 
 If all is well, reboot , and you won't be prompted for a passphrase, unless secure boot is disabled or secure boot state has changed.
 
-### 13. Tips
+### 14. Tips
 
 Now if at some point later in time, our secure boot state has changed, for example by, booting an UBUNTU ISO which adds it's own secure boot keys, the TPM won't unlock our encrypted drive anymore.
 To fix it, first enter UEFI, and clear the TPM.
 
 Then boot into Arch Linux, as root.
 
-Then we need to kill keyslots previously used by the tpm.
+Then we need to kill keyslots previously used by the **TPM**.
 
 Remove TPM Keyslot:
 
@@ -525,10 +528,10 @@ $ sudo cryptsetup token remove --token-id 1 /dev/nvme0n1p2
 ```
 Here we specify `token-id` as `1` based on the previous output of `luksDump`. Specify it correspondingy depending on what the token number is on your output of `luksDump`.
 
-Now repeat the steps from [TPM enrollment](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2/edit/main/README.md#12-enrolling-the-tpm) to renroll to the TPM.
+Now repeat the steps from [TPM enrollment](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2?tab=readme-ov-file#12-enrolling-the-tpm) to renroll to the TPM.
 
 
-With this the guide has mostly covered on how to install Arch Linux, Encrypt disk with LUKS2 , use logical volumes with LVM2, how to setup Secure Boot, and how to enroll the TPM.
+With this, the guide has mostly covered on how to install Arch Linux, Encrypt disk with LUKS2 , use logical volumes with LVM2, how to setup Secure Boot, and how to enroll the TPM.
 
 The only steps remaining are to install a Desktop Environment or a Window Manager, which this guide, unfortunately, will not cover.
 
