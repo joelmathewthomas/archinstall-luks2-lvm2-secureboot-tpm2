@@ -77,10 +77,10 @@ After partitioning, `lsblk` will output the following.
 
 ```
 $ lsblk
-NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
-nvme0n1     259:0    0   710G  0 disk
-├─nvme0n1p1 259:1    0   1024M  0 part 
-└─nvme0n1p2 259:2    0   709G  0 part
+NAME        MAJ:MIN  RM  SIZE   RO TYPE MOUNTPOINT
+nvme0n1     259:0    0   710G   0  disk
+├─nvme0n1p1 259:1    0   1024M  0  part 
+└─nvme0n1p2 259:2    0   709G   0  part
 ```
 
 ### 3. Create the encrypted LUKS2 container.
