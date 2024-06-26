@@ -17,7 +17,8 @@ Alternatively, from an existing Arch Linux installation run:
 $ pacman-key -v archlinux-version-x86_64.iso.sig
 ```
 
-This guide assumes that your system supports UEFI.
+This guide assumes that your system supports UEFI amd you have a `Wired Ethernet` connection.
+If you want to use `Wi-Fi`, refer to [Arch Wiki](https://wiki.archlinux.org/title/installation_guide#Connect_to_the_internet)
 
 ### 1. Disk Preparation
 
