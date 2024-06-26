@@ -171,7 +171,7 @@ Mount the partition to `/mnt/efi`:
 This is generally user specific configuration, and you might have a different setup you might, want to follow.
 So it is recommended to refer to official [Arch Wiki Installation guide](https://wiki.archlinux.org/title/installation_guide#Installation), for this section. And you may come back here and follow from the next section, when it is time to [configure mkinitcpio](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2/edit/main/README.md#7-configuring-mkinitcpio).
 
-But, if you want to follow through, how i do it, feel free to follow through this section.
+But, if you want to follow through, how I do it, feel free to follow through this section.
 
 Install essential packages:
 
@@ -527,7 +527,7 @@ Now if at some point later in time, our secure boot state has changed, the TPM w
 This can be done in a very short step and is less prone to error by running the following command:
 
 ```
-systemd-cryptenroll --wipe-slot=tpm2 /dev/<device>
+systemd-cryptenroll --wipe-slot=tpm2 /dev/<device> --tpm2-pcrs=0+7
 ```
 
 Or, if you prefer to do it manually, do the following:
