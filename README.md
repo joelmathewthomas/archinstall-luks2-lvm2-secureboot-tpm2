@@ -528,7 +528,7 @@ $ sudo cryptsetup token remove --token-id 1 /dev/nvme0n1p2
 ```
 Here we specify `token-id` as `1` based on the previous output of `luksDump`. Specify it correspondingy depending on what the token number is on your output of `luksDump`.
 
-Now repeat the steps from [TPM enrollment](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2?tab=readme-ov-file#12-enrolling-the-tpm) to renroll to the TPM.
+Now repeat the steps from [TPM enrollment](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2?tab=readme-ov-file#13-enrolling-the-tpm) to renroll to the TPM.
 
 
 With this, the guide has mostly covered on how to install Arch Linux, Encrypt disk with LUKS2 , use logical volumes with LVM2, how to setup Secure Boot, and how to enroll the TPM.
