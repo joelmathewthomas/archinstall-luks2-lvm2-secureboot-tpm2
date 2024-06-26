@@ -528,7 +528,15 @@ We'll now enroll our system firmware and secure boot state.
 This would allow our TPM to unlock our encrypted drive, as long as the state hasn't changed.
 
 ```
-$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/nvme0n1p2
+$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+11 /dev/nvme0n1p2
+```
+
+```
+Additional Flags
+
+--tpm2-with-pin=BOOL
+When enrolling a TPM2 device, controls whether to require the user to enter a PIN when unlocking the volume in addition to PCR binding, based on TPM2 policy authentication. Defaults to "no". Despite being called PIN, any character can be used, not just numbers.
+Note that incorrect PIN entry when unlocking increments the TPM dictionary attack lockout mechanism, and may lock out users for a prolonged time, depending on its configuration. The lockout mechanism is a global property of the TPM, systemd-cryptenroll does not control or configure the lockout mechanism. You may use tpm2-tss tools to inspect or configure the dictionary attack lockout, with tpm2_getcap(1) and tpm2_dictionarylockout(1) commands, respectively.
 ```
 
 **Note**: Including PCR0 in the PCRs can cause the entry to become invalid after every firmware update. This happens because PCR0 reflects measurements of the firmware, and any update to the firmware will change these measurements, invalidating the TPM2 entry. If you prefer to avoid this issue, you might exclude PCR0 and use only PCR7 or other suitable PCRs.
