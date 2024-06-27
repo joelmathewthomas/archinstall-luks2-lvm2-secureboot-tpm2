@@ -528,7 +528,7 @@ We'll now enroll our system firmware and secure boot state.
 This would allow our TPM to unlock our encrypted drive, as long as the state hasn't changed.
 
 ```
-$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=7+11 /dev/nvme0n1p2
+$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/nvme0n1p2
 ```
 
 ```
@@ -552,7 +552,7 @@ Now if at some point later in time, our secure boot state has changed, the TPM w
 This can be done in a very short step and is less prone to error by running the following command:
 
 ```
-systemd-cryptenroll --wipe-slot=tpm2 /dev/<device> --tpm2-pcrs=7+11
+systemd-cryptenroll --wipe-slot=tpm2 /dev/<device> --tpm2-pcrs=0+7
 ```
 
 Or, if you prefer to do it manually, do the following:
