@@ -1,4 +1,4 @@
-e# Arch Linux install with full disk encryption with LUKS2 | Logical Volumes with LVM2 | Secure Boot | TPM2 Setup
+# Arch Linux install with full disk encryption with LUKS2 | Logical Volumes with LVM2 | Secure Boot | TPM2 Setup
 A complete Arch Linux installation guide with **LUKS2** full disk encryption, and logical volumes with **LVM2**, and added security using **Secure Boot** with **Unified Kernel Image** and **TPM2 LUKS** key enrollment for auto unlocking encrypted root.
 
 Firstly, Acquire an installation image. Visit the Download page and, acquire the ISO file and the respective GnuPG signature, and flash it to a USB drive and boot off it.
