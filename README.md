@@ -334,7 +334,7 @@ This is an example output.
 
 Now you need to obtain the **UUID** for the luks container , in our case for `/dev/nvme0n1p2` which is `abcdef12-3456-7890-abcd-ef1234567890`
 
-### 9. Install the systemd-ukify and sbsigntools
+### 9. Install the `systemd-ukify` and `sbsigntools`
 
 It is possible for someone to mimic our root partiton's UUID, and basically, query the TPM for the encryption key, even though, it is not the actual OS. To prevent this, we can create a PCR Policy to pre-calculate what the value in PCR11 would be during the `enter-initrd` boot phase, and use it along with other PCR registers to verify the secure state of the system. As PCR11 is extended at various phases during boot, any attempt to query the TPM after the `enter-initrd` phase would be met with failure, as the expected value does not match the current value in the PCR11 register, even though all the other PCR registers have expected value.
 
