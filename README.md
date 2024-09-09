@@ -84,7 +84,7 @@ nvme0n1     259:0    0   710G   0  disk
 └─nvme0n1p2 259:2    0   709G   0  part
 ```
 
-### 3. Create the encrypted LUKS2 container.
+### 3. Create the encrypted LUKS2 container
 
 Now we, need to create the **LUKS2** encrypted container.
 
