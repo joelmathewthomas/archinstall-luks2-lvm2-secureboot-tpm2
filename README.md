@@ -289,7 +289,7 @@ Add new user to wheel group:
 # usermod -G wheel newuser
 ```
 
-### 7. Configure mkinitcpio
+### 7. Configure `mkinitcpio`
 
 To build a working systemd based initramfs, modify the `HOOKS=` line in mkinitcpio.conf as follows: 
 Add the following hooks: **systemd, keyboard, sd-vconsole, sd-encrypt, lvm2**
@@ -302,9 +302,9 @@ You can skip `sd-vconsole` , if you didn't configure `/etc/vconsole.conf`
 Do **not** regenerate the initramfs **yet**, as the `/efi/EFI/Linux` directory needs to be created first , which we will do later
 
 
-### 8. Configure mkinitcpio for Unified kernel images.
+### 8. Set kernel command line
 
-mkinitcpio supports reading kernel parameters from command line files in the `/etc/cmdline.d` directory. Mkinitcpio will concatenate the contents of all files with a `.conf` extension in this directory and use them to generate the kernel command line. Any lines in the command line file that start with a # character are treated as comments and ignored by mkinitcpio. 
+`mkinitcpio` supports reading kernel parameters from command line files in the `/etc/cmdline.d` directory. `mkinitcpio` will concatenate the contents of all files with a `.conf` extension in this directory and use them to generate the kernel command line. Any lines in the command line file that start with a # character are treated as comments and ignored by `mkinitcpio`. 
 
 Create the `cmdline.d` directory:
 
@@ -317,7 +317,7 @@ In order to unlock the encrypted root partition at boot, the following kernel pa
 ```
 /etc/cmdline.d/root.conf
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-rd.luks.name=device-UUID=cryptlvm root=/dev/MyVolGroup/root
+rd.luks.name=device-UUID=cryptlvm root=/dev/MyVolGroup/root rw rootfstype=ext4 rd.shell=0 rd.emergency=reboot
 ```
 
 You can obtain the `device-UUID` by running command `blkid`.
@@ -334,7 +334,57 @@ This is an example output.
 
 Now you need to obtain the **UUID** for the luks container , in our case for `/dev/nvme0n1p2` which is `abcdef12-3456-7890-abcd-ef1234567890`
 
-Next, modify `/etc/mkinitcpio.d/linux.preset`, as follows, with the appropriate mount point of the EFI system partition: 
+### 9. Install the systemd-ukify and sbsigntools
+
+It is possible for someone to mimic our root partiton's UUID, and basically, query the TPM for the encryption key, even though, it is not the actual OS. To prevent this, we can create a PCR Policy to pre-calculate what the value in PCR11 would be during the `enter-initrd` boot phase, and use it along with other PCR registers to verify the secure state of the system. As PCR11 is extended at various phases during boot, any attempt to query the TPM after the `enter-initrd` phase would be met with failure, as the expected value does not match the current value in the PCR11 register, even though all the other PCR registers have expected value.
+
+To do this, we need to install the `systemd-ukify` and `sbsigntools`
+
+```
+sudo pacman -Syu systemd-ukify sbsigntools efitools
+```
+
+`mkinitcpio` can build a UKI itself, but it prefers to use systemd-ukify when it is available. When building an UKI with `systemd-ukify`, it uses `systemd-measure` to automatically pre-calculate expected PCR11 values. The PCR11 values depends on the content of the UKI (see systemd-stub documentation), but PCR11 is also extended at different boot "phases". `systemd-measure` can be used to create and sign a policy for a specific phase.
+
+When enrolling the secret into the TPM, our policy will be:
+
+    PCR7 must match the current value so that the Secure Boot state was not altered
+    PCR11 will be linked to a public key, so that the secret can be unsealed using a signed policy as long as the PCR11 value matches the value provided in the policy, and the signature matches the public key.
+
+### 10. Configure `systemd-ukify`
+
+The kernel and initrd section should not be explicited in the configuration, they will be automatically provided as arguments by the tool calling systemd-ukify (mkinitcpio for Arch, kernel-install for Fedora).
+
+The `.pcrpkey` section will match `PCRPublicKey` because there is exactly one `PCRPublicKey` key present in the configuration. If you want to calculate other policies, as an example to seal secret that can be obtained once the system is booted, you will have to specify which public key must be included in the `.pcrpkey` section.
+
+The calculated policy will be included in the .pcrsig section.
+
+When `.pcrsig` and/or `.pcrpkey` sections are present in a unified kernel image their contents are passed to the booted kernel in an synthetic initrd cpio archive that places them in the `/.extra/tpm2-pcr-signature.json` and `/.extra/tpm2-pcr-public-key.pem` files. Typically, a tmpfiles.d line then ensures they are copied into `/run/systemd/tpm2-pcr-signature.json` and `/run/systemd/tpm2-pcr-public-key.pem` where they remain accessible even after the system transitions out of the initrd environment into the host file system. Tools such as `systemd-cryptsetup@.service`, `systemd-cryptenroll` and `systemd-creds` will automatically use files present under these paths to unlock protected resources (encrypted storage or credentials) or bind encryption to booted kernels.
+
+Create `uki.conf`
+
+```
+/etc/uki.conf
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+[UKI]
+OSRelease=@/etc/os-release
+PCRBanks=sha256
+
+[PCRSignature:initrd]
+Phases=enter-initrd
+PCRPrivateKey=/etc/kernel/pcr-initrd.key.pem
+PCRPublicKey=/etc/kernel/pcr-initrd.pub.pem
+```
+
+Generate the key for the PCR policy
+
+```
+sudo ukify genkey --config=/etc/kernel/uki.conf
+```
+
+### 11. Use `mkinitcpio` to generate the UKI
+
+Now, modify `/etc/mkinitcpio.d/linux.preset`, as follows, with the appropriate mount point of the EFI system partition: 
 
 Here is a working example linux.preset for the linux kernel and the Arch splash screen. 
 
@@ -377,9 +427,7 @@ Now, regenerate `initramfs`:
 # mkinitcpio -p linux
 ```
 
-Optionally, remove any leftover `initramfs-*.img` from `/boot` or `/efi`. 
-
-### 9. Configuring the boot loader
+### 12. Configuring the boot loader
 
 Install `systemd-boot` with:
 
@@ -389,7 +437,7 @@ Install `systemd-boot` with:
 
 The Unified kernel image generated by mkinitcpio will be automatically recognized and does not need an entry in `/efi/loader/entries/`.
 
-### 10. Installing NetworkManager
+### 13. Installing NetworkManager
 
 Install NetworkManager to ensure we have network connectivity when we boot into our system later:
 
@@ -397,7 +445,7 @@ Install NetworkManager to ensure we have network connectivity when we boot into 
 pacman -S networkmanager && systemctl enable NetworkManager
 ```
 
-### 11. Reboot into `UEFI`
+### 14. Reboot into `UEFI`
 
 Now reboot into `UEFI` and put secure boot into **SETUP MODE**. Refer to your motherboard manufaturer's guide on how to do that.
 
@@ -409,7 +457,7 @@ Now when booting into **Arch Linux** you'll be prompted to enter the passphrase 
 
 Enter it and boot into the system. Login as **root**.
 
-### 12. Secure Boot
+### 15. Secure Boot
 
 Now to configure secure boot , first install the `sbctl` utility:
 
@@ -417,7 +465,7 @@ Now to configure secure boot , first install the `sbctl` utility:
 $ pacman -S sbctl
 ```
 
-**Note: It might say completed installation with some errors, that's fine because sbctl can't find the key database, because there never was one.
+**Note**: It might say completed installation with some errors, that's fine because sbctl can't find the key database, because there never was one.
 
 Now run ```sbctl status``` and ensure setup mode is enabled.
 
@@ -430,13 +478,20 @@ $ sbctl create-keys
 Enroll the keys, with Microsoft's keys, to the UEFI:
 
 ```
-$ sbctl enroll-keys -m --firmware-builtin
+$ sbctl enroll-keys -m --firmware-builtin --tpm-eventlog
 ```
 
 ```
 Options
 -m, --microsoft
 Enroll UEFI vendor certificates from Microsoft into the signature database. See Option ROM*.
+
+-t, --tpm-eventlog
+Enroll checksums from the TPM Eventlog into the signature database.
+
+See Option ROM*.
+
+This feature is experimental
 
 -f, --firmware-builtin
 Enroll signatures from dbDefault, KEKDefault or PKDefault. This is usefull if sbctl does not vendor your OEM certificates, or doesn’t include all of them.
@@ -447,7 +502,10 @@ delimitered string.
 Default: "db,KEK"
 ```
 
-Warning: Some firmware is signed and verified with Microsoft's keys when secure boot is enabled. Not validating devices could brick them. To enroll your keys without enrolling Microsoft's, run: `sbctl enroll-keys`. Only do this if you know what you are doing.
+**Warnings:** If using the flag `--tpm-eventlog`, results in a warning or error, just ignore it. It means that operation is not supported on your specific device. Trying to force it can soft brick your device.
+
+Some firmware is signed and verified with Microsoft's keys when secure boot is enabled. Not validating devices could brick them. To enroll your keys without enrolling Microsoft's, run: `sbctl enroll-keys`. Only do this if you know what you are doing.
+
 
 Check the secure boot status again:
 
@@ -497,7 +555,9 @@ System:
   Boot into FW: supported
 ```
 
-### 13. Enrolling the TPM
+Optionally, remove any leftover `initramfs-*.img` from `/boot` or `/efi`. 
+
+### 16. Enrolling the TPM
 
 Make sure Secure Boot is active and in user mode when binding to PCR 7, otherwise, unauthorized boot devices could unlock the encrypted volume.
 The state of PCR 7 can change if firmware certificates change, which can risk locking the user out. This can be implicitly done by fwupd or explicitly by rotating Secure Boot keys.
@@ -528,7 +588,7 @@ We'll now enroll our system firmware and secure boot state.
 This would allow our TPM to unlock our encrypted drive, as long as the state hasn't changed.
 
 ```
-$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 /dev/nvme0n1p2
+$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7+9 --tpm2-public-key /etc/kernel/pcr-initrd.pub.pem /dev/nvme0n1p2
 ```
 
 ```
@@ -545,7 +605,7 @@ Info on all additional PCRs can be found [here](https://wiki.archlinux.org/title
 
 If all is well, reboot , and you won't be prompted for a passphrase, unless secure boot is disabled or secure boot state has changed.
 
-### 14. Tips
+### 17. Tips
 
 Now if at some point later in time, our secure boot state has changed, the TPM won't unlock our encrypted drive anymore. To fix it, do the following.
 
