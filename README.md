@@ -588,7 +588,7 @@ We'll now enroll our system firmware and secure boot state.
 This would allow our TPM to unlock our encrypted drive, as long as the state hasn't changed.
 
 ```
-$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7+9 --tpm2-public-key /etc/kernel/pcr-initrd.pub.pem /dev/nvme0n1p2
+$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --tpm2-public-key /etc/kernel/pcr-initrd.pub.pem /dev/nvme0n1p2
 ```
 
 ```
@@ -667,6 +667,8 @@ This guide was written by [Joel Mathew Thomas](https://github.com/joelmathewthom
 ### References
 
 For more detailed information, please refer to the [Arch Wiki on Encrypting an Entire System](https://wiki.archlinux.org/title/dm-crypt/Encrypting_an_entire_system).
+
+[TPM Policy to protect against rogue OS attacks](https://gist.github.com/dylanjan313/c7599db289c40f4cdf78262b16dc8d82)
 
 Thank You.
 
