@@ -1,4 +1,4 @@
-7# Arch Linux install with full disk encryption with LUKS2 | Logical Volumes with LVM2 | Secure Boot | TPM2 Setup
+# Arch Linux install with full disk encryption with LUKS2 | Logical Volumes with LVM2 | Secure Boot | TPM2 Setup
 A complete Arch Linux installation guide with **LUKS2** full disk encryption, and logical volumes with **LVM2**, and added security using **Secure Boot** with **Unified Kernel Image** and **TPM2 LUKS** key enrollment for auto unlocking encrypted root.
 
 Firstly, Acquire an installation image. Visit the Download page and, acquire the ISO file and the respective GnuPG signature, and flash it to a USB drive and boot off it.
@@ -601,7 +601,7 @@ Note that incorrect PIN entry when unlocking increments the TPM dictionary attac
 
 **Note**: Including PCR0 in the PCRs can cause the entry to become invalid after every firmware update. This happens because PCR0 reflects measurements of the firmware, and any update to the firmware will change these measurements, invalidating the TPM2 entry. If you prefer to avoid this issue, you might exclude PCR0 and use only PCR7 or other suitable PCRs.
 
-Info on all additional PCRs can be found [here](https://wiki.archlinux.org/title/Trusted_Platform_Module#Accessing_PCR_registers)
+Info on all additional PCRs can be found [here](https://wiki.archlinux.org/title/Trusted_Platform_Module#Accessing_PCR_registers).
 
 If all is well, reboot , and you won't be prompted for a passphrase, unless secure boot is disabled or secure boot state has changed.
 
