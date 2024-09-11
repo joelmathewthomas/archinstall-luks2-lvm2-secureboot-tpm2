@@ -128,7 +128,7 @@ Create a volume group (in this example, it is named `MyVolGroup`, but it can be 
 
 Create all your logical volumes on the volume group: 
 
-*Tip*: If a logical volume will be formatted with ext4, leave at least 256 MiB free space in the volume group to allow using `e2scrub`. After creating the last volume with `-l 100%FREE`, this can be accomplished by reducing its size with `lvreduce -L -256M MyVolGroup/home`.
+**Tip**: If a logical volume will be formatted with ext4, leave at least 256 MiB free space in the volume group to allow using `e2scrub`. After creating the last volume with `-l 100%FREE`, this can be accomplished by reducing its size with `lvreduce -L -256M MyVolGroup/home`.
 
 ```
 # lvcreate -L 4G MyVolGroup -n swap
