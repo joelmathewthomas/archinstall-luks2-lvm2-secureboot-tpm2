@@ -22,7 +22,7 @@ If you want to use `Wi-Fi`, refer to the [Arch Wiki](https://wiki.archlinux.org/
 
 ### 1. Disk Preparation
 
-We'll use a 1024MB FAT32 system partition for our **EFI** partition , and for the root we'll use an **ext4** partition and a **SWAP** partition using **LVM2** logical volumes inside a LUKS encrypted partition. 
+We'll use a 1024MB FAT32 system partition for our **EFI** partition , and for the root we'll use an **ext4** partition and a **SWAP** partition using **LVM2** logical volumes inside a LUKS encrypted partition.
 
 ### 2. Partition the disks
 
@@ -60,7 +60,7 @@ Open a terminal. Identify your disk. For this guide, we'll use /dev/nvme0n1 as a
         Ensure the type is Linux filesystem.
 
     Write Changes:
-    
+
         Select [ Write ].
         Type yes to confirm.
 
@@ -80,7 +80,7 @@ After partitioning, `lsblk` will output the following.
 $ lsblk
 NAME        MAJ:MIN  RM  SIZE   RO TYPE MOUNTPOINT
 nvme0n1     259:0    0   710G   0  disk
-├─nvme0n1p1 259:1    0   1024M  0  part 
+├─nvme0n1p1 259:1    0   1024M  0  part
 └─nvme0n1p2 259:2    0   709G   0  part
 ```
 
@@ -90,19 +90,20 @@ Now we, need to create the **LUKS2** encrypted container.
 
 **Optional**: Overwriting your disk with random data is an optional step that can help prevent any possible recovery of old data. This is typically done before setting up the LUKS2 container to ensure the disk is fully erased.
 
-Warning: This will erase all data on the disk. Ensure you have selected the correct device.
+> [!WARNING]
+> This will erase all data on the disk. Ensure you have selected the correct device.
 
 ```
 dd if=/dev/urandom of=/dev/nvme0n1p2 bs=1M status=progress
 ```
 
-Create the LUKS encrypted container at the designated partition. Enter the chosen password twice. 
+Create the LUKS encrypted container at the designated partition. Enter the chosen password twice.
 
 ```
 # cryptsetup luksFormat /dev/nvme0n1p2
 ```
 
-Open the container: 
+Open the container:
 
 ```
 # cryptsetup open /dev/nvme0n1p2 cryptlvm
@@ -120,15 +121,16 @@ Create a physical volume on top of the opened LUKS container:
 # pvcreate /dev/mapper/cryptlvm
 ```
 
-Create a volume group (in this example, it is named `MyVolGroup`, but it can be whatever you want) and add the previously created physical volume to it: 
+Create a volume group (in this example, it is named `MyVolGroup`, but it can be whatever you want) and add the previously created physical volume to it:
 
 ```
 # vgcreate MyVolGroup /dev/mapper/cryptlvm
 ```
 
-Create all your logical volumes on the volume group: 
+Create all your logical volumes on the volume group:
 
-**Tip**: If a logical volume will be formatted with ext4, leave at least 256 MiB free space in the volume group to allow using `e2scrub`. After creating the last volume with `-l 100%FREE`, this can be accomplished by reducing its size with `lvreduce -L -256M MyVolGroup/home`.
+> [!TIP]
+> If a logical volume will be formatted with ext4, leave at least 256 MiB free space in the volume group to allow using `e2scrub`. After creating the last volume with `-l 100%FREE`, this can be accomplished by reducing its size with `lvreduce -L -256M MyVolGroup/home`.
 
 ```
 # lvcreate -L 4G MyVolGroup -n swap
@@ -168,9 +170,10 @@ Mount the partition to `/mnt/efi`:
 
 ### 6. Installation
 
-**Note**: This section of the guide deals with installing the base system, setting up timezones, locale, hostname, hosts, creating new non-root user's, setting passwords for both `root` and `non-root` user accounts.
-This is generally user specific configuration, and you might have a different setup you might, want to follow.
-So it is recommended to refer to official [Arch Wiki Installation guide](https://wiki.archlinux.org/title/installation_guide#Installation), for this section. And you may come back here and follow from the next section, when it is time to [configure mkinitcpio](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2#7-configure-mkinitcpio).
+> [!NOTE]
+> This section of the guide deals with installing the base system, setting up timezones, locale, hostname, hosts, creating new non-root user's, setting passwords for both `root` and `non-root` user accounts.
+> This is generally user specific configuration, and you might have a different setup you might, want to follow.
+> So it is recommended to refer to official [Arch Wiki Installation guide](https://wiki.archlinux.org/title/installation_guide#Installation), for this section. And you may come back here and follow from the next section, when it is time to [configure mkinitcpio](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2#7-configure-mkinitcpio).
 
 But, if you want to follow through, how I do it, feel free to follow through this section.
 
@@ -211,7 +214,7 @@ This command assumes the hardware clock is set to UTC.
 
 Localization:
 
-Edit `/etc/locale.gen` and uncomment `en_US.UTF-8 UTF-8` and other needed `UTF-8` locales. Generate the locales by running: 
+Edit `/etc/locale.gen` and uncomment `en_US.UTF-8 UTF-8` and other needed `UTF-8` locales. Generate the locales by running:
 
 ```
 # locale-gen
@@ -291,7 +294,7 @@ Add new user to wheel group:
 
 ### 7. Configure `mkinitcpio`
 
-To build a working systemd based initramfs, modify the `HOOKS=` line in mkinitcpio.conf as follows: 
+To build a working systemd based initramfs, modify the `HOOKS=` line in mkinitcpio.conf as follows:
 Add the following hooks: **systemd, keyboard, sd-vconsole, sd-encrypt, lvm2**
 
 ```
@@ -304,7 +307,7 @@ Do **not** regenerate the initramfs **yet**, as the `/efi/EFI/Linux` directory n
 
 ### 8. Set kernel command line
 
-`mkinitcpio` supports reading kernel parameters from command line files in the `/etc/cmdline.d` directory. `mkinitcpio` will concatenate the contents of all files with a `.conf` extension in this directory and use them to generate the kernel command line. Any lines in the command line file that start with a # character are treated as comments and ignored by `mkinitcpio`. 
+`mkinitcpio` supports reading kernel parameters from command line files in the `/etc/cmdline.d` directory. `mkinitcpio` will concatenate the contents of all files with a `.conf` extension in this directory and use them to generate the kernel command line. Any lines in the command line file that start with a # character are treated as comments and ignored by `mkinitcpio`.
 
 Create the `cmdline.d` directory:
 
@@ -384,9 +387,9 @@ sudo ukify genkey --config=/etc/kernel/uki.conf
 
 ### 11. Use `mkinitcpio` to generate the UKI
 
-Now, modify `/etc/mkinitcpio.d/linux.preset`, as follows, with the appropriate mount point of the EFI system partition: 
+Now, modify `/etc/mkinitcpio.d/linux.preset`, as follows, with the appropriate mount point of the EFI system partition:
 
-Here is a working example linux.preset for the linux kernel and the Arch splash screen. 
+Here is a working example linux.preset for the linux kernel and the Arch splash screen.
 
 ```
 /etc/mkinitcpio.d/linux.preset
@@ -409,11 +412,19 @@ fallback_uki="/efi/EFI/Linux/arch-linux-fallback.efi"
 fallback_options="-S autodetect"
 ```
 
+> [!TIP]
+> Regarding the situation where other kernels (such as `extra/linux-zen`) are installed, the corresponding `/etc/mkinitcpio.d/linux-zen.preset` file should be edited.
+
 Finally, to build the **UKI**, make sure that the directory for the UKIs exist.
-For example, for the linux preset: 
+For example, for the linux preset:
 ```
 # mkdir -p /efi/EFI/Linux
 ```
+
+> [!TIP]
+> All kernel UKI efi files are located in this directory, including `extra/linux-zen`.
+>
+> That is to say, regardless of which kernel you use, you only need to create this one directory.
 
 Now install the `lvm2` package:
 
@@ -426,6 +437,11 @@ Now, regenerate `initramfs`:
 ```
 # mkinitcpio -p linux
 ```
+
+> [!TIP]
+> Use the command `mkinitcpio -P` to generate all initramfs at once for multiple kernels.
+>
+> Or use `mkinitcpio -p linux-zen` for `extra/linux-zen`.
 
 ### 12. Configuring the boot loader
 
@@ -465,7 +481,8 @@ Now to configure secure boot , first install the `sbctl` utility:
 $ pacman -S sbctl
 ```
 
-**Note**: It might say completed installation with some errors, that's fine because sbctl can't find the key database, because there never was one.
+> [!NOTE]
+> It might say completed installation with some errors, that's fine because sbctl can't find the key database, because there never was one.
 
 Now run ```sbctl status``` and ensure setup mode is enabled.
 
@@ -502,7 +519,9 @@ delimitered string.
 Default: "db,KEK"
 ```
 
-**Warnings:** If using the flag `--tpm-eventlog`, results in a warning or error, just ignore it. It means that operation is not supported on your specific device. Trying to force it can soft brick your device.
+> [!WARNING]
+> If using the flag `--tpm-eventlog`, results in a warning or error, just ignore it.
+> It means that operation is not supported on your specific device. Trying to force it can soft brick your device.
 
 Some firmware is signed and verified with Microsoft's keys when secure boot is enabled. Not validating devices could brick them. To enroll your keys without enrolling Microsoft's, run: `sbctl enroll-keys`. Only do this if you know what you are doing.
 
@@ -513,7 +532,7 @@ Check the secure boot status again:
 $ sbctl status
 ```
 
-sbctl should be installed now, but secure boot will not work until the boot files have been signed with the keys you just created. 
+sbctl should be installed now, but secure boot will not work until the boot files have been signed with the keys you just created.
 
 Check what files need to be signed for secure boot to work:
 
@@ -530,7 +549,7 @@ Now sign all the unsigned files. Most probably these are the files you need to s
 /efi/EFI/systemd/systemd-bootx64.efi
 ```
 
-The files that need to be signed will depend on your system's layout, kernel and boot loader. 
+The files that need to be signed will depend on your system's layout, kernel and boot loader.
 
 ```
 $ sbctl sign --save /efi/EFI/BOOT/BOOTX64.EFI
@@ -555,7 +574,7 @@ System:
   Boot into FW: supported
 ```
 
-Optionally, remove any leftover `initramfs-*.img` from `/boot` or `/efi`. 
+Optionally, remove any leftover `initramfs-*.img` from `/boot` or `/efi`.
 
 ### 16. Enrolling the TPM
 
@@ -576,7 +595,7 @@ $ sudo systemd-cryptenroll /dev/nvme0n1p2 --recovery-key
 
 Save or write down the recovery key in some safe and secure place.
 
-To check that the new recovery key was enrolled, dump the LUKS configuration and look for a systemd-tpm2 token entry, as well as an additional entry in the Keyslots section: 
+To check that the new recovery key was enrolled, dump the LUKS configuration and look for a systemd-tpm2 token entry, as well as an additional entry in the Keyslots section:
 
 ```
 $ cryptsetup luksDump /dev/nvme0n1p2
@@ -590,7 +609,10 @@ This would allow our TPM to unlock our encrypted drive, as long as the state has
 ```
 $ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --tpm2-public-key /etc/kernel/pcr-initrd.pub.pem --tpm2-with-pin=yes /dev/nvme0n1p2
 ```
-**Warning**: It is recommended to use a pin to unlock the TPM, instead of allowing it to unlock automatically, for more security.
+
+> [!WARNING]
+> It is recommended to use a pin to unlock the TPM, instead of allowing it to unlock automatically, for more security.
+> Use `--tpm2-with-pin=no` **ONLY** if you think that touchless tpm unlocking is acceptable (this is also the default option).
 
 ```
 Additional Flags
@@ -600,7 +622,12 @@ When enrolling a TPM2 device, controls whether to require the user to enter a PI
 Note that incorrect PIN entry when unlocking increments the TPM dictionary attack lockout mechanism, and may lock out users for a prolonged time, depending on its configuration. The lockout mechanism is a global property of the TPM, systemd-cryptenroll does not control or configure the lockout mechanism. You may use tpm2-tss tools to inspect or configure the dictionary attack lockout, with tpm2_getcap(1) and tpm2_dictionarylockout(1) commands, respectively.
 ```
 
-**Note**: Including PCR0 in the PCRs can cause the entry to become invalid after every firmware update. This happens because PCR0 reflects measurements of the firmware, and any update to the firmware will change these measurements, invalidating the TPM2 entry. If you prefer to avoid this issue, you might exclude PCR0 and use only PCR7 or other suitable PCRs.
+> [!NOTE]
+> Including PCR0 in the PCRs can cause the entry to become invalid after every firmware update.
+> This happens because PCR0 reflects measurements of the firmware, and any update to the firmware will change these measurements, invalidating the TPM2 entry.
+> If you prefer to avoid this issue, you might exclude PCR0 and use only PCR7 or other suitable PCRs.
+>
+> For reference see discussion: [PCR_0_should_be_avoided](https://wiki.archlinux.org/title/Talk:Trusted_Platform_Module#PCR_0_should_be_avoided)
 
 Info on all additional PCRs can be found [here](https://wiki.archlinux.org/title/Trusted_Platform_Module#Accessing_PCR_registers).
 
@@ -633,11 +660,11 @@ In the **Tokens**: section, look for systemd-tmp2, and under it find the keyslot
 ```
 Tokens:
   0: systemd-recovery
-	Keyslot:    1
+    Keyslot:    1
   1: systemd-tpm2
   ...
   ...
-	Keyslot:    2
+    Keyslot:    2
 ```
 As you can see keyslot **1** is used by `systemd-recovery` and **2** is used by `systemd-tpm2`
 
