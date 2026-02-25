@@ -613,6 +613,7 @@ $ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --tpm2-public-key 
 > [!WARNING]
 > It is recommended to use a pin to unlock the TPM, instead of allowing it to unlock automatically, for more security.
 > Use `--tpm2-with-pin=no` **only** if you are comfortable with TPM unlocking without user interaction (this is the default behavior).
+> Do not use `--tpm2-pcrs=11` here. This option seals the LUKS key to the current raw PCR value and will break after kernel or initramfs updates.
 
 ```
 Additional Flags
