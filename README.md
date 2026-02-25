@@ -374,7 +374,6 @@ OSRelease=@/etc/os-release
 PCRBanks=sha256
 
 [PCRSignature:initrd]
-Phases=enter-initrd
 PCRPrivateKey=/etc/kernel/pcr-initrd.key.pem
 PCRPublicKey=/etc/kernel/pcr-initrd.pub.pem
 ```
