@@ -17,7 +17,7 @@ Alternatively, from an existing Arch Linux installation run:
 $ pacman-key -v archlinux-version-x86_64.iso.sig
 ```
 
-This guide assumes that your system supports UEFI amd you have a `Wired Ethernet` connection.
+This guide assumes that your system supports UEFI and you have a `Wired Ethernet` connection.
 If you want to use `Wi-Fi`, refer to the [Arch Wiki](https://wiki.archlinux.org/title/installation_guide#Connect_to_the_internet)
 
 ### 1. Disk Preparation
@@ -289,7 +289,7 @@ Uncomment the following line:
 Add new user to wheel group:
 
 ```
-# usermod -G wheel newuser
+# usermod -aG wheel newuser
 ```
 
 ### 7. Configure `mkinitcpio`
@@ -364,6 +364,10 @@ The calculated policy will be included in the .pcrsig section.
 
 When `.pcrsig` and/or `.pcrpkey` sections are present in a unified kernel image their contents are passed to the booted kernel in an synthetic initrd cpio archive that places them in the `/.extra/tpm2-pcr-signature.json` and `/.extra/tpm2-pcr-public-key.pem` files. Typically, a tmpfiles.d line then ensures they are copied into `/run/systemd/tpm2-pcr-signature.json` and `/run/systemd/tpm2-pcr-public-key.pem` where they remain accessible even after the system transitions out of the initrd environment into the host file system. Tools such as `systemd-cryptsetup@.service`, `systemd-cryptenroll` and `systemd-creds` will automatically use files present under these paths to unlock protected resources (encrypted storage or credentials) or bind encryption to booted kernels.
 
+The `[PCRSignature:initrd]` section covers only the enter-initrd phase. This is the policy used by systemd-cryptenroll to unseal the LUKS key from the TPM. Once the boot progresses past this phase, PCR 11 gets extended and the initrd signature no longer matches, so the TPM will refuse to release the key
+
+The `[PCRSignature:system]` section is separate and covers all four boot phases: enter-initrd, leave-initrd, sysinit, and ready. This is not used for LUKS unlock. It exists for systemd-tpm2-setup-early.service and systemd-tpm2-setup.service, which provision Storage Root Key (SRK) and NvPCR required by systemd-creds.
+
 Create `uki.conf`
 
 ```
@@ -374,8 +378,14 @@ OSRelease=@/etc/os-release
 PCRBanks=sha256
 
 [PCRSignature:initrd]
+Phases=enter-initrd
 PCRPrivateKey=/etc/kernel/pcr-initrd.key.pem
 PCRPublicKey=/etc/kernel/pcr-initrd.pub.pem
+
+[PCRSignature:system]
+Phases=enter-initrd leave-initrd sysinit ready
+PCRPrivateKey=/etc/kernel/pcr-system.key.pem
+PCRPublicKey=/etc/kernel/pcr-system.pub.pem
 ```
 
 Generate the key for the PCR policy
@@ -640,7 +650,7 @@ Now if at some point later in time, our secure boot state has changed, the TPM w
 This can be done in a very short step and is less prone to error by running the following command:
 
 ```
-systemd-cryptenroll --wipe-slot=tpm2 /dev/<device> --tpm2-pcrs=0+7
+systemd-cryptenroll --wipe-slot=tpm2 /dev/<device> --tpm2-pcrs=0+7 --tpm2-public-key /etc/kernel/pcr-initrd.pub.pem --tpm2-with-pin=<yes/no>
 ```
 
 Or, if you prefer to do it manually, do the following:
