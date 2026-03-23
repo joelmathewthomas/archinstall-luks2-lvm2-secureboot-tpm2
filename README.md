@@ -69,7 +69,7 @@ Open a terminal. Identify your disk. For this guide, we'll use /dev/nvme0n1 as a
     +------------------+-----------------------+------------+---------------+
     | Partition Number | Partition Type        | Size       | Description   |
     +------------------+-----------------------+------------+---------------+
-    | /dev/nvme0n1p1   | EFI System            | 1024M       | EFI Partition |
+    | /dev/nvme0n1p1   | EFI System            | 1024M      | EFI Partition |
     | /dev/nvme0n1p2   | Linux filesystem      | Remaining  | LUKS2 Volume  |
     +------------------+-----------------------+------------+---------------+
     ```
