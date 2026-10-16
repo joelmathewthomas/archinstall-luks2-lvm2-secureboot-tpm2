@@ -358,9 +358,17 @@ When enrolling the secret into the TPM, our policy will be:
 
 The kernel and initrd section should not be explicited in the configuration, they will be automatically provided as arguments by the tool calling systemd-ukify (mkinitcpio for Arch, kernel-install for Fedora).
 
-The `.pcrpkey` section will match `PCRPublicKey` because there is exactly one `PCRPublicKey` key present in the configuration. If you want to calculate other policies, as an example to seal secret that can be obtained once the system is booted, you will have to specify which public key must be included in the `.pcrpkey` section.
+Since this configuration uses separate PCR keys for the initrd and system phases, set `PCRPKey` to choose the key embedded in the UKI's `.pcrpkey` section:
 
-The calculated policy will be included in the .pcrsig section.
+```
+PCRPKey=/etc/kernel/pcr-initrd.pub.pem
+```
+
+Set `SignInitrdPCRs=yes` to generate the signed PCR policy for the `initrd` policy reference:
+
+```
+SignInitrdPCRs=yes
+```
 
 When `.pcrsig` and/or `.pcrpkey` sections are present in a unified kernel image their contents are passed to the booted kernel in an synthetic initrd cpio archive that places them in the `/.extra/tpm2-pcr-signature.json` and `/.extra/tpm2-pcr-public-key.pem` files. Typically, a tmpfiles.d line then ensures they are copied into `/run/systemd/tpm2-pcr-signature.json` and `/run/systemd/tpm2-pcr-public-key.pem` where they remain accessible even after the system transitions out of the initrd environment into the host file system. Tools such as `systemd-cryptsetup@.service`, `systemd-cryptenroll` and `systemd-creds` will automatically use files present under these paths to unlock protected resources (encrypted storage or credentials) or bind encryption to booted kernels.
 
@@ -376,6 +384,8 @@ Create `uki.conf`
 [UKI]
 OSRelease=@/etc/os-release
 PCRBanks=sha256
+PCRPKey=/etc/kernel/pcr-initrd.pub.pem
+SignInitrdPCRs=yes
 
 [PCRSignature:initrd]
 Phases=enter-initrd
@@ -446,6 +456,14 @@ Now, regenerate `initramfs`:
 ```
 # mkinitcpio -p linux
 ```
+
+After generating the UKI, check that it contains the `.pcrpkey` and `.pcrsig` sections:
+
+```
+$ ukify inspect /efi/EFI/Linux/arch-linux.efi
+```
+
+Change the path if your UKI is stored elsewhere. Check the fallback UKI too if you use it.
 
 > [!TIP]
 > Use the command `mkinitcpio -P` to generate all initramfs at once for multiple kernels.
