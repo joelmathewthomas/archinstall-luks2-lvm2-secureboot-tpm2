@@ -111,6 +111,16 @@ Open the container:
 
 Here `cryptlvm` is the name we are assigning to the encrypted container after opening it.
 
+> **Optional: SSD performance**
+>
+> Disabling the `dm-crypt` read and write workqueues may improve SSD performance. Results depend on the drive and workload.
+>
+> ```
+> # cryptsetup --persistent --perf-no_read_workqueue --perf-no_write_workqueue refresh cryptlvm
+> ```
+>
+> This applies the settings now and saves them for future unlocks. See the [ArchWiki section on disabling workqueues](<https://wiki.archlinux.org/title/Dm-crypt/Specialties#Disable_workqueue_for_increased_solid_state_drive_(SSD)_performance>).
+
 The decrypted container is now available at `/dev/mapper/cryptlvm`.
 
 ### 4. Preparing the logical volumes
