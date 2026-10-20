@@ -339,7 +339,7 @@ Now you need to obtain the **UUID** for the luks container , in our case for `/d
 
 ### 9. Install the `systemd-ukify` and `sbsigntools`
 
-It is possible for someone to mimic our root partiton's UUID, and basically, query the TPM for the encryption key, even though, it is not the actual OS. To prevent this, we can create a PCR Policy to pre-calculate what the value in PCR11 would be during the `enter-initrd` boot phase, and use it along with other PCR registers to verify the secure state of the system. As PCR11 is extended at various phases during boot, any attempt to query the TPM after the `enter-initrd` phase would be met with failure, as the expected value does not match the current value in the PCR11 register, even though all the other PCR registers have expected value.
+It is possible for someone to mimic our root partition's UUID and query the TPM for the encryption key from an operating system other than the one installed. To prevent this, we can create a signed PCR policy for PCR 11 that represents the expected value during the initrd phase, and use it alongside direct PCR bindings to verify the system's boot state. PCR 0 binds unlocking to firmware measurements, while PCR 7 checks the Secure Boot state. As PCR 11 is extended at different phases during boot, the initrd-specific policy will no longer match after boot progresses beyond the initrd phase, so it cannot be used to release the LUKS key later.
 
 To do this, we need to install the `systemd-ukify` and `sbsigntools`
 
@@ -349,10 +349,10 @@ sudo pacman -Syu systemd-ukify sbsigntools efitools
 
 `mkinitcpio` can build a UKI itself, but it prefers to use systemd-ukify when it is available. When building an UKI with `systemd-ukify`, it uses `systemd-measure` to automatically pre-calculate expected PCR11 values. The PCR11 values depends on the content of the UKI (see systemd-stub documentation), but PCR11 is also extended at different boot "phases". `systemd-measure` can be used to create and sign a policy for a specific phase.
 
-When enrolling the secret into the TPM, our policy will be:
+When enrolling the LUKS key into the TPM, this guide uses the following checks:
 
-    PCR7 must match the current value so that the Secure Boot state was not altered
-    PCR11 will be linked to a public key, so that the secret can be unsealed using a signed policy as long as the PCR11 value matches the value provided in the policy, and the signature matches the public key.
+    PCR0 and PCR7 must match their current values, binding unlocking to the firmware measurements and Secure Boot state.
+    PCR11 is linked to a public key. The TPM accepts a signed policy only when the signature matches that public key and the policy's PCR value matches the current PCR11 value. The `initrd` policy reference restricts this policy to early boot.
 
 ### 10. Configure `systemd-ukify`
 
@@ -364,9 +364,11 @@ The calculated policy will be included in the .pcrsig section.
 
 When `.pcrsig` and/or `.pcrpkey` sections are present in a unified kernel image their contents are passed to the booted kernel in an synthetic initrd cpio archive that places them in the `/.extra/tpm2-pcr-signature.json` and `/.extra/tpm2-pcr-public-key.pem` files. Typically, a tmpfiles.d line then ensures they are copied into `/run/systemd/tpm2-pcr-signature.json` and `/run/systemd/tpm2-pcr-public-key.pem` where they remain accessible even after the system transitions out of the initrd environment into the host file system. Tools such as `systemd-cryptsetup@.service`, `systemd-cryptenroll` and `systemd-creds` will automatically use files present under these paths to unlock protected resources (encrypted storage or credentials) or bind encryption to booted kernels.
 
-The `[PCRSignature:initrd]` section covers only the enter-initrd phase. This is the policy used by systemd-cryptenroll to unseal the LUKS key from the TPM. Once the boot progresses past this phase, PCR 11 gets extended and the initrd signature no longer matches, so the TPM will refuse to release the key
+The updated configuration uses one PCR signing key pair for the normal boot phases and generates an additional signature for the initrd phase. The `[PCRSignature:all]` section signs the normal boot-phase policies. `SignInitrdPCRs=yes` creates the extra signature associated with the `initrd` policy reference. This is the policy used by `systemd-cryptenroll` to enroll a LUKS key that can only be unlocked during early boot.
 
-The `[PCRSignature:system]` section is separate and covers all four boot phases: enter-initrd, leave-initrd, sysinit, and ready. This is not used for LUKS unlock. It exists for systemd-tpm2-setup-early.service and systemd-tpm2-setup.service, which provision Storage Root Key (SRK) and NvPCR required by systemd-creds.
+The initrd-specific policy applies during the initrd phase, after `enter-initrd` and before `leave-initrd`. Once boot progresses past this phase, PCR 11 is extended and the initrd signature no longer matches, so the TPM will refuse to release the LUKS key using that policy.
+
+The normal boot-phase policy is also needed by `systemd-tpm2-setup-early.service` and `systemd-tpm2-setup.service`, which provision the Storage Root Key (SRK) and NvPCRs used by `systemd-creds`. Keeping this policy available for the other boot phases avoids restricting these services to the initrd phase alone.
 
 Create `uki.conf`
 
@@ -376,19 +378,15 @@ Create `uki.conf`
 [UKI]
 OSRelease=@/etc/os-release
 PCRBanks=sha256
+PCRPKey=/etc/systemd/tpm2-pcr-public-key.pem
+SignInitrdPCRs=yes
 
-[PCRSignature:initrd]
-Phases=enter-initrd
-PCRPrivateKey=/etc/kernel/pcr-initrd.key.pem
-PCRPublicKey=/etc/kernel/pcr-initrd.pub.pem
-
-[PCRSignature:system]
-Phases=enter-initrd leave-initrd sysinit ready
-PCRPrivateKey=/etc/kernel/pcr-system.key.pem
-PCRPublicKey=/etc/kernel/pcr-system.pub.pem
+[PCRSignature:all]
+PCRPrivateKey=/etc/systemd/tpm2-pcr-private-key.pem
+PCRPublicKey=/etc/systemd/tpm2-pcr-public-key.pem
 ```
 
-Generate the key for the PCR policy
+Generate the PCR signing key pair. The files must not already exist; keep the private key secure.
 
 ```
 sudo ukify genkey --config=/etc/kernel/uki.conf
@@ -604,7 +602,7 @@ $ sudo systemd-cryptenroll /dev/nvme0n1p2 --recovery-key
 
 Save or write down the recovery key in some safe and secure place.
 
-To check that the new recovery key was enrolled, dump the LUKS configuration and look for a systemd-tpm2 token entry, as well as an additional entry in the Keyslots section:
+To check that the new recovery key was enrolled, dump the LUKS configuration and look for a `systemd-recovery` token, as well as an additional entry in the Keyslots section:
 
 ```
 $ cryptsetup luksDump /dev/nvme0n1p2
@@ -612,11 +610,10 @@ $ cryptsetup luksDump /dev/nvme0n1p2
 
 It will most probably be in `keyslot 1`.
 
-We'll now enroll our system firmware and secure boot state.
-This would allow our TPM to unlock our encrypted drive, as long as the state hasn't changed.
+We'll now enroll our system firmware and Secure Boot state, along with the signed PCR 11 policy for the initrd phase. PCR 0 and PCR 7 are bound directly to their current values; the public-key policy reference restricts the signed PCR 11 policy to early boot.
 
 ```
-$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --tpm2-public-key /etc/kernel/pcr-initrd.pub.pem --tpm2-with-pin=yes /dev/nvme0n1p2
+$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --tpm2-public-key=/etc/systemd/tpm2-pcr-public-key.pem --tpm2-public-key-policyref=initrd --tpm2-with-pin=yes /dev/nvme0n1p2
 ```
 
 > [!WARNING]
@@ -641,7 +638,7 @@ Note that incorrect PIN entry when unlocking increments the TPM dictionary attac
 
 Info on all additional PCRs can be found [here](https://wiki.archlinux.org/title/Trusted_Platform_Module#Accessing_PCR_registers).
 
-If all is well, reboot , and you won't be prompted for a passphrase, unless secure boot is disabled or secure boot state has changed.
+If all is well, reboot and verify that the TPM unlocks the encrypted volume as expected. With the PIN enabled, you will still be prompted to enter the PIN.
 
 ### 17. Tips
 
@@ -650,7 +647,7 @@ Now if at some point later in time, our secure boot state has changed, the TPM w
 This can be done in a very short step and is less prone to error by running the following command:
 
 ```
-systemd-cryptenroll --wipe-slot=tpm2 /dev/<device> --tpm2-pcrs=0+7 --tpm2-public-key /etc/kernel/pcr-initrd.pub.pem --tpm2-with-pin=<yes/no>
+systemd-cryptenroll --wipe-slot=tpm2 /dev/nvme0n1p2 --tpm2-device=auto --tpm2-pcrs=0+7 --tpm2-public-key=/etc/systemd/tpm2-pcr-public-key.pem --tpm2-public-key-policyref=initrd --tpm2-with-pin=<yes/no>
 ```
 
 Or, if you prefer to do it manually, do the following:
@@ -724,8 +721,4 @@ This guide was written by [Joel Mathew Thomas](https://github.com/joelmathewthom
 
 For more detailed information, please refer to the [Arch Wiki on Encrypting an Entire System](https://wiki.archlinux.org/title/dm-crypt/Encrypting_an_entire_system).
 
-[TPM Policy to protect against rogue OS attacks](https://gist.github.com/dylanjan313/c7599db289c40f4cdf78262b16dc8d82)
-
 Thank You.
-
-
