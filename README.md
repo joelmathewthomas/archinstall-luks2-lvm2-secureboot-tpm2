@@ -694,6 +694,24 @@ Here we specify `token-id` as `1` based on the previous output of `luksDump`. Sp
 Now repeat the steps from [TPM enrollment](https://github.com/joelmathewthomas/archinstall-luks2-lvm2-secureboot-tpm2?tab=readme-ov-file#16-enrolling-the-tpm) to renroll to the TPM.
 
 
+### 18. Enable SSD TRIM
+
+To enable TRIM support for the encrypted device, run:
+
+```
+sudo cryptsetup --allow-discards --persistent refresh cryptlvm
+```
+
+Enable the weekly TRIM timer:
+
+```
+sudo systemctl enable --now fstrim.timer
+```
+
+> [!WARNING]
+> Enabling TRIM leaks information about which encrypted blocks are unused. See the [Arch Wiki](https://wiki.archlinux.org/title/Dm-crypt/Specialties#Discard/TRIM_support_for_solid_state_drives_(SSD)) for details.
+
+
 With this, the guide has mostly covered on how to install Arch Linux, Encrypt disk with LUKS2 , use logical volumes with LVM2, how to setup Secure Boot, and how to enroll the TPM.
 
 The only steps remaining are to install a Desktop Environment or a Window Manager, which this guide, unfortunately, will not cover.
