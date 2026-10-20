@@ -485,7 +485,7 @@ Enter it and boot into the system. Login as **root**.
 Now to configure secure boot , first install the `sbctl` utility:
 
 ```
-$ pacman -S sbctl
+# pacman -S sbctl
 ```
 
 > [!NOTE]
@@ -496,13 +496,13 @@ Now run ```sbctl status``` and ensure setup mode is enabled.
 Then create your secure boot keys with:
 
 ```
-$ sbctl create-keys
+# sbctl create-keys
 ```
 
 Enroll the keys, with Microsoft's keys, to the UEFI:
 
 ```
-$ sbctl enroll-keys -m --firmware-builtin --tpm-eventlog
+# sbctl enroll-keys -m --firmware-builtin --tpm-eventlog
 ```
 
 ```
@@ -536,7 +536,7 @@ Some firmware is signed and verified with Microsoft's keys when secure boot is e
 Check the secure boot status again:
 
 ```
-$ sbctl status
+# sbctl status
 ```
 
 sbctl should be installed now, but secure boot will not work until the boot files have been signed with the keys you just created.
@@ -559,10 +559,10 @@ Now sign all the unsigned files. Most probably these are the files you need to s
 The files that need to be signed will depend on your system's layout, kernel and boot loader.
 
 ```
-$ sbctl sign --save /efi/EFI/BOOT/BOOTX64.EFI
-$ sbctl sign --save /efi/EFI/Linux/arch-linux-fallback.efi
-$ sbctl sign --save /efi/EFI/Linux/arch-linux.efi
-$ sbctl sign --save /efi/EFI/systemd/systemd-bootx64.efi
+# sbctl sign --save /efi/EFI/BOOT/BOOTX64.EFI
+# sbctl sign --save /efi/EFI/Linux/arch-linux-fallback.efi
+# sbctl sign --save /efi/EFI/Linux/arch-linux.efi
+# sbctl sign --save /efi/EFI/systemd/systemd-bootx64.efi
 ```
 
 The `--save` flag is used to add a pacman hook to automatically sign all new files whenever the **Linux kernel**, **systemd** or the **boot loader** is updated.
@@ -591,13 +591,13 @@ The state of PCR 7 can change if firmware certificates change, which can risk lo
 To begin, run the following command to list your installed TPMs and the driver in use:
 
 ```
-$ systemd-cryptenroll --tpm2-device=list
+# systemd-cryptenroll --tpm2-device=list
 ```
 
 First, let's generate a recovery key in case it all gets messed up some time in the future:
 
 ```
-$ sudo systemd-cryptenroll /dev/nvme0n1p2 --recovery-key
+# sudo systemd-cryptenroll /dev/nvme0n1p2 --recovery-key
 ```
 
 Save or write down the recovery key in some safe and secure place.
@@ -605,7 +605,7 @@ Save or write down the recovery key in some safe and secure place.
 To check that the new recovery key was enrolled, dump the LUKS configuration and look for a `systemd-recovery` token, as well as an additional entry in the Keyslots section:
 
 ```
-$ cryptsetup luksDump /dev/nvme0n1p2
+# cryptsetup luksDump /dev/nvme0n1p2
 ```
 
 It will most probably be in `keyslot 1`.
@@ -613,7 +613,7 @@ It will most probably be in `keyslot 1`.
 We'll now enroll our system firmware and Secure Boot state, along with the signed PCR 11 policy for the initrd phase. PCR 0 and PCR 7 are bound directly to their current values; the public-key policy reference restricts the signed PCR 11 policy to early boot.
 
 ```
-$ sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --tpm2-public-key=/etc/systemd/tpm2-pcr-public-key.pem --tpm2-public-key-policyref=initrd --tpm2-with-pin=yes /dev/nvme0n1p2
+# sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs=0+7 --tpm2-public-key=/etc/systemd/tpm2-pcr-public-key.pem --tpm2-public-key-policyref=initrd --tpm2-with-pin=yes /dev/nvme0n1p2
 ```
 
 > [!WARNING]
@@ -678,13 +678,13 @@ As you can see keyslot **1** is used by `systemd-recovery` and **2** is used by 
 Now to kill it run:
 
 ```
-$ sudo cryptsetup luksKillSlot /dev/nvme0n1p2 2
+# sudo cryptsetup luksKillSlot /dev/nvme0n1p2 2
 ```
 
 After killing the keyslot, we need to remove the Token associated with it.
 
 ```
-$ sudo cryptsetup token remove --token-id 1 /dev/nvme0n1p2
+# sudo cryptsetup token remove --token-id 1 /dev/nvme0n1p2
 ```
 Here we specify `token-id` as `1` based on the previous output of `luksDump`. Specify it correspondingy depending on what the token number is on your output of `luksDump`.
 
@@ -722,3 +722,4 @@ This guide was written by [Joel Mathew Thomas](https://github.com/joelmathewthom
 For more detailed information, please refer to the [Arch Wiki on Encrypting an Entire System](https://wiki.archlinux.org/title/dm-crypt/Encrypting_an_entire_system).
 
 Thank You.
+
